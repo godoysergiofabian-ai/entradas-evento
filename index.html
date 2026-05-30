@@ -25,7 +25,6 @@ input:focus { outline: none; border-color: #4285f4; }
 .btn-blue:hover { background: #2c6fdb; }
 .btn-green { background: #34a853; color: white; }
 .btn-green:hover { background: #2d8f47; }
-.btn-gray { background: #f1f1f1; color: #333; border: 1px solid #ccc; }
 .result { padding: 16px; border-radius: 8px; margin-top: 14px; display: none; }
 .result.ok { background: #e6f4ea; border: 1px solid #34a853; color: #1a7336; }
 .result.error { background: #fce8e6; border: 1px solid #ea4335; color: #c5221f; }
@@ -44,10 +43,8 @@ input:focus { outline: none; border-color: #4285f4; }
 .stat { background: white; border-radius: 8px; padding: 14px; text-align: center; border: 1px solid #e0e0e0; }
 .stat-num { font-size: 26px; font-weight: bold; color: #1a1a2e; }
 .stat-label { font-size: 11px; color: #888; margin-top: 2px; }
-.search { margin-bottom: 12px; }
 .qr-wrap { width: 52px; height: 52px; flex-shrink: 0; }
 .scan-area { border: 2px dashed #ccc; border-radius: 10px; padding: 30px 20px; text-align: center; margin-bottom: 16px; }
-.scan-icon { font-size: 48px; margin-bottom: 8px; }
 .codigos-list { margin-top: 10px; }
 .codigo-chip { display: inline-block; background: #e8f0fe; color: #1a56db; font-family: monospace; font-size: 15px; font-weight: bold; padding: 6px 12px; border-radius: 6px; margin: 4px; }
 .config-note { background: #fff8e1; border: 1px solid #f9a825; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #7a5000; margin-bottom: 16px; }
@@ -71,10 +68,10 @@ input:focus { outline: none; border-color: #4285f4; }
 </div>
 
 <div id="panel-admin" class="panel active">
-  <div class="stats" id="stats">
-    <div class="stat"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Total</div></div>
-    <div class="stat"><div class="stat-num" id="stat-usadas" style="color:#34a853">—</div><div class="stat-label">Ingresaron</div></div>
-    <div class="stat"><div class="stat-num" id="stat-pend" style="color:#f9a825">—</div><div class="stat-label">Pendientes</div></div>
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total</div></div>
+    <div class="stat"><div class="stat-num" id="stat-usadas" style="color:#34a853">0</div><div class="stat-label">Ingresaron</div></div>
+    <div class="stat"><div class="stat-num" id="stat-pend" style="color:#f9a825">0</div><div class="stat-label">Pendientes</div></div>
   </div>
   <div class="card">
     <label>Nombre completo</label>
@@ -93,7 +90,7 @@ input:focus { outline: none; border-color: #4285f4; }
 
 <div id="panel-scanner" class="panel">
   <div class="scan-area">
-    <div class="scan-icon">📷</div>
+    <div style="font-size:48px;margin-bottom:8px">📷</div>
     <p style="font-size:14px;color:#666;margin-bottom:16px">Ingresá el código de la entrada</p>
     <input type="text" id="scan-input" placeholder="EVT-XXXXXX" style="text-transform:uppercase;text-align:center;font-size:18px;font-weight:bold;letter-spacing:3px;margin-bottom:8px">
     <button class="btn btn-green" onclick="validarEntrada()">✓ Validar entrada</button>
@@ -102,28 +99,17 @@ input:focus { outline: none; border-color: #4285f4; }
 </div>
 
 <div id="panel-lista" class="panel">
-  <input type="text" class="search" id="search" placeholder="Buscar por nombre, DNI o código..." oninput="renderLista()">
+  <input type="text" id="search" placeholder="Buscar por nombre, DNI o código..." oninput="renderLista()" style="margin-bottom:12px">
   <div id="lista-container"></div>
 </div>
 
 <div id="panel-config" class="panel">
-  <div class="config-note">
-    ⚠️ Pegá acá la URL de tu script de Apps Script. Sin esto el sistema no funciona.
-  </div>
+  <div class="config-note">⚠️ Pegá acá la URL de tu script de Apps Script.</div>
   <div class="card">
     <label>URL del script (Apps Script)</label>
     <input type="text" class="url-input" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec">
     <button class="btn btn-blue" onclick="guardarConfig()">Guardar URL</button>
     <div class="result" id="res-config"></div>
-  </div>
-  <div class="card" style="font-size:13px;color:#555;line-height:1.8">
-    <strong>Cómo obtener la URL:</strong><br>
-    1. Abrí tu Google Sheet<br>
-    2. Extensiones → Apps Script<br>
-    3. Implementar → Nueva implementación<br>
-    4. Tipo: Aplicación web<br>
-    5. Ejecutar como: Yo · Acceso: Cualquier persona<br>
-    6. Copiá la URL que aparece y pegála arriba
   </div>
 </div>
 
@@ -162,14 +148,33 @@ function guardarConfig() {
   const url = document.getElementById('cfg-url').value.trim();
   const res = document.getElementById('res-config');
   if (!url.includes('script.google.com')) {
-    showResult(res, 'error', 'La URL no parece correcta. Tiene que empezar con https://script.google.com...');
+    showResult(res, 'error', 'La URL no parece correcta.');
     return;
   }
   localStorage.setItem(CONFIG_KEY, JSON.stringify({ url }));
   showResult(res, 'ok', '✓ URL guardada correctamente');
 }
 
-async function generarEntradas() {
+function jsonp(url, params, callback) {
+  const cbName = 'cb_' + Math.random().toString(36).substr(2, 9);
+  params.callback = cbName;
+  const qs = Object.keys(params).map(k => k + '=' + encodeURIComponent(params[k])).join('&');
+  const script = document.createElement('script');
+  script.src = url + '?' + qs;
+  window[cbName] = function(data) {
+    delete window[cbName];
+    document.body.removeChild(script);
+    callback(null, data);
+  };
+  script.onerror = function() {
+    delete window[cbName];
+    document.body.removeChild(script);
+    callback(new Error('No se pudo conectar'));
+  };
+  document.body.appendChild(script);
+}
+
+function generarEntradas() {
   const url = getURL();
   const nombre = document.getElementById('f-nombre').value.trim();
   const dni = document.getElementById('f-dni').value.trim();
@@ -178,15 +183,15 @@ async function generarEntradas() {
   const res = document.getElementById('res-admin');
 
   if (!nombre || !dni) { showResult(res, 'error', 'Completá nombre y DNI'); return; }
-  if (!url) { showResult(res, 'error', 'Primero configurá la URL del script en la pestaña ⚙️ Config'); return; }
+  if (!url) { showResult(res, 'error', 'Configurá la URL en ⚙️ Config'); return; }
 
   showResult(res, '', 'Generando...');
 
-  try {
-    const params = new URLSearchParams({ action: 'crear', nombre, dni, mail, cantidad });
-    const r = await fetch(url + '?' + params);
-    const data = await r.json();
-
+  jsonp(url, { action: 'crear', nombre, dni, mail, cantidad }, function(err, data) {
+    if (err || !data) {
+      showResult(res, 'error', 'No se pudo conectar. Verificá la URL en Config.');
+      return;
+    }
     if (data.ok) {
       const tickets = getTickets();
       data.codigos.forEach((codigo, i) => {
@@ -195,10 +200,8 @@ async function generarEntradas() {
       saveTickets(tickets);
       renderStats();
       renderRecientes();
-
-      const chips = data.codigos.map(c => `<span class="codigo-chip">${c}</span>`).join('');
-      showResult(res, 'ok', `✓ ${data.codigos.length} entrada(s) generada(s)<br><div class="codigos-list">${chips}</div>`);
-
+      const chips = data.codigos.map(c => '<span class="codigo-chip">' + c + '</span>').join('');
+      showResult(res, 'ok', '✓ ' + data.codigos.length + ' entrada(s) generada(s)<br><div class="codigos-list">' + chips + '</div>');
       document.getElementById('f-nombre').value = '';
       document.getElementById('f-dni').value = '';
       document.getElementById('f-mail').value = '';
@@ -206,47 +209,43 @@ async function generarEntradas() {
     } else {
       showResult(res, 'error', 'Error: ' + JSON.stringify(data));
     }
-  } catch (err) {
-    showResult(res, 'error', 'No se pudo conectar. Verificá la URL en Config.');
-  }
+  });
 }
 
-async function validarEntrada() {
+function validarEntrada() {
   const url = getURL();
   const codigo = document.getElementById('scan-input').value.trim().toUpperCase();
   const res = document.getElementById('res-scanner');
 
   if (!codigo) return;
-  if (!url) { showResult(res, 'error', 'Configurá la URL del script en ⚙️ Config'); return; }
+  if (!url) { showResult(res, 'error', 'Configurá la URL en ⚙️ Config'); return; }
 
   showResult(res, '', 'Verificando...');
 
-  try {
-    const params = new URLSearchParams({ action: 'validar', codigo });
-    const r = await fetch(url + '?' + params);
-    const data = await r.json();
-
+  jsonp(url, { action: 'validar', codigo }, function(err, data) {
+    if (err || !data) {
+      showResult(res, 'error', 'No se pudo conectar.');
+      return;
+    }
     if (data.ok) {
       const tickets = getTickets();
       const t = tickets.find(x => x.id === codigo);
       if (t) { t.usado = true; t.usadoEn = new Date().toISOString(); saveTickets(tickets); }
       res.style.display = 'block';
       res.className = 'result ok';
-      res.innerHTML = `<div class="result-icon">✅</div><div class="result-name">${data.nombre}</div><div class="result-detail">DNI ${data.dni} · Entrada válida</div>`;
+      res.innerHTML = '<div class="result-icon">✅</div><div class="result-name">' + data.nombre + '</div><div class="result-detail">DNI ' + data.dni + ' · Entrada válida</div>';
     } else if (data.motivo === 'ya_usado') {
       res.style.display = 'block';
       res.className = 'result warning';
-      res.innerHTML = `<div class="result-icon">⛔</div><div class="result-name">QR ya utilizado</div><div class="result-detail">${data.nombre} · Ingresó: ${data.fechaUso}</div>`;
+      res.innerHTML = '<div class="result-icon">⛔</div><div class="result-name">QR ya utilizado</div><div class="result-detail">' + data.nombre + ' · Ingresó: ' + data.fechaUso + '</div>';
     } else {
       res.style.display = 'block';
       res.className = 'result error';
-      res.innerHTML = `<div class="result-icon">❌</div><div class="result-name">Código inválido</div><div class="result-detail">El código ${codigo} no existe</div>`;
+      res.innerHTML = '<div class="result-icon">❌</div><div class="result-name">Código inválido</div><div class="result-detail">El código ' + codigo + ' no existe</div>';
     }
     document.getElementById('scan-input').value = '';
     setTimeout(() => { res.style.display = 'none'; }, 4000);
-  } catch (err) {
-    showResult(res, 'error', 'No se pudo conectar.');
-  }
+  });
 }
 
 function renderStats() {
@@ -261,16 +260,7 @@ function renderRecientes() {
   const cont = document.getElementById('recientes');
   if (!recientes.length) { cont.innerHTML = ''; return; }
   cont.innerHTML = '<p style="font-size:13px;color:#888;margin-bottom:8px">Últimas entradas:</p>' +
-    recientes.map(t => `
-      <div class="ticket-item">
-        <div class="qr-wrap" id="qr-${t.id}"></div>
-        <div class="ticket-info">
-          <div class="ticket-name">${t.nombre} ${t.total > 1 ? `<span style="font-size:11px;color:#aaa">(${t.index}/${t.total})</span>` : ''}</div>
-          <div class="ticket-meta">DNI ${t.dni} · ${t.id}</div>
-        </div>
-        <span class="badge ${t.usado ? 'badge-used' : 'badge-ok'}">${t.usado ? 'Usado' : 'Válido'}</span>
-      </div>
-    `).join('');
+    recientes.map(t => '<div class="ticket-item"><div class="qr-wrap" id="qr-' + t.id + '"></div><div class="ticket-info"><div class="ticket-name">' + t.nombre + '</div><div class="ticket-meta">DNI ' + t.dni + ' · ' + t.id + '</div></div><span class="badge ' + (t.usado ? 'badge-used' : 'badge-ok') + '">' + (t.usado ? 'Usado' : 'Válido') + '</span></div>').join('');
   recientes.forEach(t => {
     const el = document.getElementById('qr-' + t.id);
     if (el && !el.innerHTML) {
@@ -284,16 +274,8 @@ function renderLista() {
   const tickets = getTickets();
   const filtered = tickets.filter(t => !q || t.nombre.toLowerCase().includes(q) || t.dni.includes(q) || t.id.toLowerCase().includes(q));
   document.getElementById('lista-container').innerHTML = filtered.length ?
-    `<p style="font-size:13px;color:#888;margin-bottom:8px">${filtered.length} entrada(s)</p>` +
-    filtered.map(t => `
-      <div class="ticket-item">
-        <div class="ticket-info">
-          <div class="ticket-name">${t.nombre}</div>
-          <div class="ticket-meta">DNI ${t.dni} · ${t.id} · ${t.mail || 'sin mail'}</div>
-        </div>
-        <span class="badge ${t.usado ? 'badge-used' : 'badge-ok'}">${t.usado ? 'Ingresó' : 'Pendiente'}</span>
-      </div>
-    `).join('') :
+    '<p style="font-size:13px;color:#888;margin-bottom:8px">' + filtered.length + ' entrada(s)</p>' +
+    filtered.map(t => '<div class="ticket-item"><div class="ticket-info"><div class="ticket-name">' + t.nombre + '</div><div class="ticket-meta">DNI ' + t.dni + ' · ' + t.id + ' · ' + (t.mail || 'sin mail') + '</div></div><span class="badge ' + (t.usado ? 'badge-used' : 'badge-ok') + '">' + (t.usado ? 'Ingresó' : 'Pendiente') + '</span></div>').join('') :
     '<p style="text-align:center;color:#aaa;padding:40px">Sin resultados</p>';
 }
 
