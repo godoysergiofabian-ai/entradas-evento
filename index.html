@@ -90,6 +90,8 @@ input:focus { outline: none; border-color: #4285f4; }
     <input type="text" id="f-nombre" placeholder="Ej: María González">
     <label>DNI</label>
     <input type="text" id="f-dni" placeholder="12345678">
+    <label>Teléfono de contacto</label>
+    <input type="tel" id="f-telefono" placeholder="Ej: 1123456789">
     <label>Mail</label>
     <input type="email" id="f-mail" placeholder="maria@mail.com">
     <label>Cantidad de entradas</label>
@@ -268,6 +270,7 @@ function generarEntradas() {
   const nombre = document.getElementById('f-nombre').value.trim();
   const dni = document.getElementById('f-dni').value.trim();
   const mail = document.getElementById('f-mail').value.trim();
+  const telefono = document.getElementById('f-telefono').value.trim();
   const cantidad = document.getElementById('f-cantidad').value;
   const res = document.getElementById('res-admin');
 
@@ -276,7 +279,7 @@ function generarEntradas() {
 
   showResult(res, '', 'Generando...');
 
-  jsonp(url, { action: 'crear', nombre, dni, mail, cantidad }, function(err, data) {
+  jsonp(url, { action: 'crear', nombre, dni, mail, telefono, cantidad }, function(err, data) {
     if (err || !data) {
       showResult(res, 'error', 'No se pudo conectar.');
       return;
@@ -294,6 +297,7 @@ function generarEntradas() {
       document.getElementById('f-nombre').value = '';
       document.getElementById('f-dni').value = '';
       document.getElementById('f-mail').value = '';
+      document.getElementById('f-telefono').value = '';
       document.getElementById('f-cantidad').value = '1';
     } else {
       showResult(res, 'error', 'Error: ' + JSON.stringify(data));
