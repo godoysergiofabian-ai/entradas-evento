@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sistema de Entradas — Evento Fin de Año</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, sans-serif; background: #f4f4f4; min-height: 100vh; }
@@ -18,13 +19,15 @@ header span { font-size: 13px; opacity: 0.6; }
 .panel.active { display: block; }
 .card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 16px; border: 1px solid #e0e0e0; }
 label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 4px; }
-input, select { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-bottom: 14px; }
+input { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-bottom: 14px; }
 input:focus { outline: none; border-color: #4285f4; }
-.btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all .2s; }
+.btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all .2s; margin-bottom: 8px; }
 .btn-blue { background: #4285f4; color: white; }
 .btn-blue:hover { background: #2c6fdb; }
 .btn-green { background: #34a853; color: white; }
 .btn-green:hover { background: #2d8f47; }
+.btn-gray { background: #f1f1f1; color: #333; border: 1px solid #ccc; }
+.btn-red { background: #ea4335; color: white; }
 .result { padding: 16px; border-radius: 8px; margin-top: 14px; display: none; }
 .result.ok { background: #e6f4ea; border: 1px solid #34a853; color: #1a7336; }
 .result.error { background: #fce8e6; border: 1px solid #ea4335; color: #c5221f; }
@@ -44,11 +47,20 @@ input:focus { outline: none; border-color: #4285f4; }
 .stat-num { font-size: 26px; font-weight: bold; color: #1a1a2e; }
 .stat-label { font-size: 11px; color: #888; margin-top: 2px; }
 .qr-wrap { width: 52px; height: 52px; flex-shrink: 0; }
-.scan-area { border: 2px dashed #ccc; border-radius: 10px; padding: 30px 20px; text-align: center; margin-bottom: 16px; }
+.scan-area { border: 2px dashed #ccc; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 16px; }
 .codigos-list { margin-top: 10px; }
 .codigo-chip { display: inline-block; background: #e8f0fe; color: #1a56db; font-family: monospace; font-size: 15px; font-weight: bold; padding: 6px 12px; border-radius: 6px; margin: 4px; }
 .config-note { background: #fff8e1; border: 1px solid #f9a825; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #7a5000; margin-bottom: 16px; }
 .url-input { font-family: monospace; font-size: 12px; }
+#reader { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+#reader video { border-radius: 10px; }
+.scanner-result { padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 12px; display: none; }
+.scanner-result.ok { background: #e6f4ea; border: 2px solid #34a853; }
+.scanner-result.error { background: #fce8e6; border: 2px solid #ea4335; }
+.scanner-result.warning { background: #fff8e1; border: 2px solid #f9a825; }
+.scanner-result .icon { font-size: 50px; margin-bottom: 8px; }
+.scanner-result .nombre { font-size: 22px; font-weight: bold; margin-bottom: 4px; }
+.scanner-result .detalle { font-size: 14px; opacity: 0.8; }
 </style>
 </head>
 <body>
@@ -89,13 +101,15 @@ input:focus { outline: none; border-color: #4285f4; }
 </div>
 
 <div id="panel-scanner" class="panel">
+  <div id="scanner-result" class="scanner-result"></div>
+  <div id="reader"></div>
+  <button class="btn btn-green" id="btn-iniciar" onclick="iniciarScanner()">📷 Iniciar cámara</button>
+  <button class="btn btn-red" id="btn-detener" onclick="detenerScanner()" style="display:none">⏹ Detener cámara</button>
   <div class="scan-area">
-    <div style="font-size:48px;margin-bottom:8px">📷</div>
-    <p style="font-size:14px;color:#666;margin-bottom:16px">Ingresá el código de la entrada</p>
+    <p style="font-size:13px;color:#666;margin-bottom:12px">O ingresá el código manualmente:</p>
     <input type="text" id="scan-input" placeholder="EVT-XXXXXX" style="text-transform:uppercase;text-align:center;font-size:18px;font-weight:bold;letter-spacing:3px;margin-bottom:8px">
-    <button class="btn btn-green" onclick="validarEntrada()">✓ Validar entrada</button>
+    <button class="btn btn-green" onclick="validarManual()">✓ Validar código</button>
   </div>
-  <div class="result" id="res-scanner" style="text-align:center"></div>
 </div>
 
 <div id="panel-lista" class="panel">
@@ -116,19 +130,17 @@ input:focus { outline: none; border-color: #4285f4; }
 <script>
 const STORAGE_KEY = 'evt-tickets';
 const CONFIG_KEY = 'evt-config';
+let html5QrCode = null;
+let scanning = false;
+let lastScanned = '';
+let lastScannedTime = 0;
 
 function getURL() {
   const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
   return cfg.url || '';
 }
-
-function getTickets() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-}
-
-function saveTickets(t) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(t));
-}
+function getTickets() { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+function saveTickets(t) { localStorage.setItem(STORAGE_KEY, JSON.stringify(t)); }
 
 function switchTab(t) {
   document.querySelectorAll('.tab').forEach((el, i) => {
@@ -142,6 +154,7 @@ function switchTab(t) {
     const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
     if (cfg.url) document.getElementById('cfg-url').value = cfg.url;
   }
+  if (t !== 'scanner' && scanning) detenerScanner();
 }
 
 function guardarConfig() {
@@ -174,6 +187,82 @@ function jsonp(url, params, callback) {
   document.body.appendChild(script);
 }
 
+function iniciarScanner() {
+  html5QrCode = new Html5Qrcode("reader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    function(decodedText) {
+      const now = Date.now();
+      if (decodedText === lastScanned && now - lastScannedTime < 3000) return;
+      lastScanned = decodedText;
+      lastScannedTime = now;
+      validarCodigo(decodedText.trim().toUpperCase());
+    },
+    function() {}
+  ).then(() => {
+    scanning = true;
+    document.getElementById('btn-iniciar').style.display = 'none';
+    document.getElementById('btn-detener').style.display = 'block';
+  }).catch(err => {
+    alert('No se pudo acceder a la cámara: ' + err);
+  });
+}
+
+function detenerScanner() {
+  if (html5QrCode) {
+    html5QrCode.stop().then(() => {
+      html5QrCode = null;
+      scanning = false;
+      document.getElementById('btn-iniciar').style.display = 'block';
+      document.getElementById('btn-detener').style.display = 'none';
+      document.getElementById('reader').innerHTML = '';
+    });
+  }
+}
+
+function validarManual() {
+  const codigo = document.getElementById('scan-input').value.trim().toUpperCase();
+  if (!codigo) return;
+  validarCodigo(codigo);
+  document.getElementById('scan-input').value = '';
+}
+
+function validarCodigo(codigo) {
+  const url = getURL();
+  const res = document.getElementById('scanner-result');
+  if (!url) {
+    mostrarResultadoScanner('error', '❌', 'Sin configurar', 'Configurá la URL en ⚙️ Config');
+    return;
+  }
+  mostrarResultadoScanner('', '⏳', 'Verificando...', codigo);
+
+  jsonp(url, { action: 'validar', codigo }, function(err, data) {
+    if (err || !data) {
+      mostrarResultadoScanner('error', '❌', 'Sin conexión', 'No se pudo conectar al servidor');
+      return;
+    }
+    if (data.ok) {
+      const tickets = getTickets();
+      const t = tickets.find(x => x.id === codigo);
+      if (t) { t.usado = true; t.usadoEn = new Date().toISOString(); saveTickets(tickets); }
+      mostrarResultadoScanner('ok', '✅', data.nombre, 'DNI ' + data.dni + ' · Entrada válida');
+    } else if (data.motivo === 'ya_usado') {
+      mostrarResultadoScanner('warning', '⛔', 'QR ya utilizado', data.nombre + ' · Ingresó: ' + data.fechaUso);
+    } else {
+      mostrarResultadoScanner('error', '❌', 'Código inválido', 'El código ' + codigo + ' no existe');
+    }
+  });
+}
+
+function mostrarResultadoScanner(tipo, icono, nombre, detalle) {
+  const res = document.getElementById('scanner-result');
+  res.style.display = 'block';
+  res.className = 'scanner-result' + (tipo ? ' ' + tipo : '');
+  res.innerHTML = '<div class="icon">' + icono + '</div><div class="nombre">' + nombre + '</div><div class="detalle">' + detalle + '</div>';
+  if (tipo) setTimeout(() => { res.style.display = 'none'; }, 4000);
+}
+
 function generarEntradas() {
   const url = getURL();
   const nombre = document.getElementById('f-nombre').value.trim();
@@ -189,7 +278,7 @@ function generarEntradas() {
 
   jsonp(url, { action: 'crear', nombre, dni, mail, cantidad }, function(err, data) {
     if (err || !data) {
-      showResult(res, 'error', 'No se pudo conectar. Verificá la URL en Config.');
+      showResult(res, 'error', 'No se pudo conectar.');
       return;
     }
     if (data.ok) {
@@ -209,42 +298,6 @@ function generarEntradas() {
     } else {
       showResult(res, 'error', 'Error: ' + JSON.stringify(data));
     }
-  });
-}
-
-function validarEntrada() {
-  const url = getURL();
-  const codigo = document.getElementById('scan-input').value.trim().toUpperCase();
-  const res = document.getElementById('res-scanner');
-
-  if (!codigo) return;
-  if (!url) { showResult(res, 'error', 'Configurá la URL en ⚙️ Config'); return; }
-
-  showResult(res, '', 'Verificando...');
-
-  jsonp(url, { action: 'validar', codigo }, function(err, data) {
-    if (err || !data) {
-      showResult(res, 'error', 'No se pudo conectar.');
-      return;
-    }
-    if (data.ok) {
-      const tickets = getTickets();
-      const t = tickets.find(x => x.id === codigo);
-      if (t) { t.usado = true; t.usadoEn = new Date().toISOString(); saveTickets(tickets); }
-      res.style.display = 'block';
-      res.className = 'result ok';
-      res.innerHTML = '<div class="result-icon">✅</div><div class="result-name">' + data.nombre + '</div><div class="result-detail">DNI ' + data.dni + ' · Entrada válida</div>';
-    } else if (data.motivo === 'ya_usado') {
-      res.style.display = 'block';
-      res.className = 'result warning';
-      res.innerHTML = '<div class="result-icon">⛔</div><div class="result-name">QR ya utilizado</div><div class="result-detail">' + data.nombre + ' · Ingresó: ' + data.fechaUso + '</div>';
-    } else {
-      res.style.display = 'block';
-      res.className = 'result error';
-      res.innerHTML = '<div class="result-icon">❌</div><div class="result-name">Código inválido</div><div class="result-detail">El código ' + codigo + ' no existe</div>';
-    }
-    document.getElementById('scan-input').value = '';
-    setTimeout(() => { res.style.display = 'none'; }, 4000);
   });
 }
 
@@ -286,7 +339,7 @@ function showResult(el, type, msg) {
 }
 
 document.getElementById('scan-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') validarEntrada();
+  if (e.key === 'Enter') validarManual();
 });
 
 renderStats();
