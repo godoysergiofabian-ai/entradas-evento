@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Entradas — Evento Fin de Año</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f4f4f4; min-height: 100vh; }
+header { background: #1a1a2e; color: white; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 18px; font-weight: bold; }
+header span { font-size: 13px; opacity: 0.6; }
+.tabs { display: flex; background: white; border-bottom: 1px solid #ddd; }
+.tab { flex: 1; padding: 14px; text-align: center; cursor: pointer; font-size: 14px; font-weight: bold; color: #666; border-bottom: 3px solid transparent; transition: all .2s; }
+.tab.active { color: #4285f4; border-bottom-color: #4285f4; }
+.panel { display: none; padding: 20px; max-width: 640px; margin: 0 auto; }
+.panel.active { display: block; }
+.card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 16px; border: 1px solid #e0e0e0; }
+label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 4px; }
+input { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-bottom: 14px; }
+input:focus { outline: none; border-color: #4285f4; }
+.btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all .2s; margin-bottom: 8px; }
+.btn-blue { background: #4285f4; color: white; }
+.btn-blue:hover { background: #2c6fdb; }
+.btn-green { background: #34a853; color: white; }
+.btn-green:hover { background: #2d8f47; }
+.btn-gray { background: #f1f1f1; color: #333; border: 1px solid #ccc; }
+.btn-red { background: #ea4335; color: white; }
+.result { padding: 16px; border-radius: 8px; margin-top: 14px; display: none; }
+.result.ok { background: #e6f4ea; border: 1px solid #34a853; color: #1a7336; }
+.result.error { background: #fce8e6; border: 1px solid #ea4335; color: #c5221f; }
+.result.warning { background: #fff8e1; border: 1px solid #f9a825; color: #7a5000; }
+.result-icon { font-size: 40px; margin-bottom: 8px; }
+.result-name { font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+.result-detail { font-size: 13px; opacity: 0.8; }
+.ticket-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 8px; background: white; }
+.ticket-info { flex: 1; }
+.ticket-name { font-size: 14px; font-weight: bold; color: #222; }
+.ticket-meta { font-size: 12px; color: #888; margin-top: 2px; }
+.badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: bold; }
+.badge-ok { background: #e6f4ea; color: #1a7336; }
+.badge-used { background: #fce8e6; color: #c5221f; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat { background: white; border-radius: 8px; padding: 14px; text-align: center; border: 1px solid #e0e0e0; }
+.stat-num { font-size: 26px; font-weight: bold; color: #1a1a2e; }
+.stat-label { font-size: 11px; color: #888; margin-top: 2px; }
+.qr-wrap { width: 52px; height: 52px; flex-shrink: 0; }
+.scan-area { border: 2px dashed #ccc; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 16px; }
+.codigos-list { margin-top: 10px; }
+.codigo-chip { display: inline-block; background: #e8f0fe; color: #1a56db; font-family: monospace; font-size: 15px; font-weight: bold; padding: 6px 12px; border-radius: 6px; margin: 4px; }
+.config-note { background: #fff8e1; border: 1px solid #f9a825; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #7a5000; margin-bottom: 16px; }
+.url-input { font-family: monospace; font-size: 12px; }
+#reader { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+#reader video { border-radius: 10px; }
+.scanner-result { padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 12px; display: none; }
+.scanner-result.ok { background: #e6f4ea; border: 2px solid #34a853; }
+.scanner-result.error { background: #fce8e6; border: 2px solid #ea4335; }
+.scanner-result.warning { background: #fff8e1; border: 2px solid #f9a825; }
+.scanner-result .icon { font-size: 50px; margin-bottom: 8px; }
+.scanner-result .nombre { font-size: 22px; font-weight: bold; margin-bottom: 4px; }
+.scanner-result .detalle { font-size: 14px; opacity: 0.8; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🎉 Sistema de Entradas</h1>
+    <span>Evento Fin de Año</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('admin')">➕ Generar</div>
+  <div class="tab" onclick="switchTab('scanner')">📷 Validar</div>
+  <div class="tab" onclick="switchTab('lista')">📋 Lista</div>
+  <div class="tab" onclick="switchTab('config')">⚙️ Config</div>
+</div>
+
+<div id="panel-admin" class="panel active">
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total</div></div>
+    <div class="stat"><div class="stat-num" id="stat-usadas" style="color:#34a853">0</div><div class="stat-label">Ingresaron</div></div>
+    <div class="stat"><div class="stat-num" id="stat-pend" style="color:#f9a825">0</div><div class="stat-label">Pendientes</div></div>
+  </div>
+  <div class="card">
+    <label>Nombre completo</label>
+    <input type="text" id="f-nombre" placeholder="Ej: María González">
+    <label>DNI</label>
+    <input type="text" id="f-dni" placeholder="12345678">
+    <label>Día del evento</label>
+    <select id="f-dia" style="width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;margin-bottom:14px">
+      <option value="SAB">Sábado 12/12</option>
+      <option value="DOM">Domingo 13/12</option>
+    </select>
+    <label>Grupo</label>
+    <select id="f-grupo" style="width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;margin-bottom:14px">
+      <option value="Grupo 1">Grupo 1 (Sábado)</option>
+      <option value="Grupo 2">Grupo 2 (Sábado)</option>
+      <option value="Grupo 3">Grupo 3 (Sábado)</option>
+      <option value="Grupo 4">Grupo 4 (Domingo)</option>
+      <option value="Grupo 5">Grupo 5 (Domingo)</option>
+      <option value="Grupo Inicial">Grupo Inicial (Domingo)</option>
+    </select>
+    <label>Teléfono de contacto</label>
+    <input type="tel" id="f-telefono" placeholder="Ej: 1123456789">
+    <label>Mail</label>
+    <input type="email" id="f-mail" placeholder="maria@mail.com">
+    <label>Cantidad de entradas</label>
+    <input type="number" id="f-cantidad" value="1" min="1" max="10">
+    <button class="btn btn-blue" onclick="generarEntradas()">Generar entradas</button>
+    <div class="result" id="res-admin"></div>
+  </div>
+  <div id="recientes"></div>
+</div>
+
+<div id="panel-scanner" class="panel">
+  <div id="scanner-result" class="scanner-result"></div>
+  <div id="reader"></div>
+  <button class="btn btn-green" id="btn-iniciar" onclick="iniciarScanner()">📷 Iniciar cámara</button>
+  <button class="btn btn-red" id="btn-detener" onclick="detenerScanner()" style="display:none">⏹ Detener cámara</button>
+  <div class="scan-area">
+    <p style="font-size:13px;color:#666;margin-bottom:12px">O ingresá el código manualmente:</p>
+    <input type="text" id="scan-input" placeholder="EVT-XXXXXX" style="text-transform:uppercase;text-align:center;font-size:18px;font-weight:bold;letter-spacing:3px;margin-bottom:8px">
+    <button class="btn btn-green" onclick="validarManual()">✓ Validar código</button>
+  </div>
+</div>
+
+<div id="panel-lista" class="panel">
+  <input type="text" id="search" placeholder="Buscar por nombre, DNI o código..." oninput="renderLista()" style="margin-bottom:12px">
+  <div id="lista-container"></div>
+</div>
+
+<div id="panel-config" class="panel">
+  <div class="config-note">⚠️ Pegá acá la URL de tu script de Apps Script.</div>
+  <div class="card">
+    <label>URL del script (Apps Script)</label>
+    <input type="text" class="url-input" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec">
+    <button class="btn btn-blue" onclick="guardarConfig()">Guardar URL</button>
+    <div class="result" id="res-config"></div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'evt-tickets';
+const CONFIG_KEY = 'evt-config';
+let html5QrCode = null;
+let scanning = false;
+let lastScanned = '';
+let lastScannedTime = 0;
+
+function getURL() {
+  const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+  return cfg.url || '';
+}
+function getTickets() { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+function saveTickets(t) { localStorage.setItem(STORAGE_KEY, JSON.stringify(t)); }
+
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['admin','scanner','lista','config'][i] === t);
+  });
+  document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
+  document.getElementById('panel-' + t).classList.add('active');
+  if (t === 'admin') { renderStats(); renderRecientes(); }
+  if (t === 'lista') renderLista();
+  if (t === 'config') {
+    const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+    if (cfg.url) document.getElementById('cfg-url').value = cfg.url;
+  }
+  if (t !== 'scanner' && scanning) detenerScanner();
+}
+
+function guardarConfig() {
+  const url = document.getElementById('cfg-url').value.trim();
+  const res = document.getElementById('res-config');
+  if (!url.includes('script.google.com')) {
+    showResult(res, 'error', 'La URL no parece correcta.');
+    return;
+  }
+  localStorage.setItem(CONFIG_KEY, JSON.stringify({ url }));
+  showResult(res, 'ok', '✓ URL guardada correctamente');
+}
+
+function jsonp(url, params, callback) {
+  const cbName = 'cb_' + Math.random().toString(36).substr(2, 9);
+  params.callback = cbName;
+  const qs = Object.keys(params).map(k => k + '=' + encodeURIComponent(params[k])).join('&');
+  const script = document.createElement('script');
+  script.src = url + '?' + qs;
+  window[cbName] = function(data) {
+    delete window[cbName];
+    document.body.removeChild(script);
+    callback(null, data);
+  };
+  script.onerror = function() {
+    delete window[cbName];
+    document.body.removeChild(script);
+    callback(new Error('No se pudo conectar'));
+  };
+  document.body.appendChild(script);
+}
+
+function iniciarScanner() {
+  html5QrCode = new Html5Qrcode("reader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    function(decodedText) {
+      const now = Date.now();
+      if (decodedText === lastScanned && now - lastScannedTime < 3000) return;
+      lastScanned = decodedText;
+      lastScannedTime = now;
+      validarCodigo(decodedText.trim().toUpperCase());
+    },
+    function() {}
+  ).then(() => {
+    scanning = true;
+    document.getElementById('btn-iniciar').style.display = 'none';
+    document.getElementById('btn-detener').style.display = 'block';
+  }).catch(err => {
+    alert('No se pudo acceder a la cámara: ' + err);
+  });
+}
+
+function detenerScanner() {
+  if (html5QrCode) {
+    html5QrCode.stop().then(() => {
+      html5QrCode = null;
+      scanning = false;
+      document.getElementById('btn-iniciar').style.display = 'block';
+      document.getElementById('btn-detener').style.display = 'none';
+      document.getElementById('reader').innerHTML = '';
+    });
+  }
+}
+
+function validarManual() {
+  const codigo = document.getElementById('scan-input').value.trim().toUpperCase();
+  if (!codigo) return;
+  validarCodigo(codigo);
+  document.getElementById('scan-input').value = '';
+}
+
+function validarCodigo(codigo) {
+  const url = getURL();
+  const res = document.getElementById('scanner-result');
+  if (!url) {
+    mostrarResultadoScanner('error', '❌', 'Sin configurar', 'Configurá la URL en ⚙️ Config');
+    return;
+  }
+  mostrarResultadoScanner('', '⏳', 'Verificando...', codigo);
+
+  jsonp(url, { action: 'validar', codigo }, function(err, data) {
+    if (err || !data) {
+      mostrarResultadoScanner('error', '❌', 'Sin conexión', 'No se pudo conectar al servidor');
+      return;
+    }
+    if (data.ok) {
+      const tickets = getTickets();
+      const t = tickets.find(x => x.id === codigo);
+      if (t) { t.usado = true; t.usadoEn = new Date().toISOString(); saveTickets(tickets); }
+      mostrarResultadoScanner('ok', '✅', data.nombre, 'DNI ' + data.dni + ' · Entrada válida');
+    } else if (data.motivo === 'ya_usado') {
+      mostrarResultadoScanner('warning', '⛔', 'QR ya utilizado', data.nombre + ' · Ingresó: ' + data.fechaUso);
+    } else {
+      mostrarResultadoScanner('error', '❌', 'Código inválido', 'El código ' + codigo + ' no existe');
+    }
+  });
+}
+
+function mostrarResultadoScanner(tipo, icono, nombre, detalle) {
+  const res = document.getElementById('scanner-result');
+  res.style.display = 'block';
+  res.className = 'scanner-result' + (tipo ? ' ' + tipo : '');
+  res.innerHTML = '<div class="icon">' + icono + '</div><div class="nombre">' + nombre + '</div><div class="detalle">' + detalle + '</div>';
+  if (tipo) setTimeout(() => { res.style.display = 'none'; }, 4000);
+}
+
+function generarEntradas() {
+  const url = getURL();
+  const nombre = document.getElementById('f-nombre').value.trim();
+  const dni = document.getElementById('f-dni').value.trim();
+  const mail = document.getElementById('f-mail').value.trim();
+  const telefono = document.getElementById('f-telefono').value.trim();
+  const cantidad = document.getElementById('f-cantidad').value;
+  const res = document.getElementById('res-admin');
+
+  if (!nombre || !dni) { showResult(res, 'error', 'Completá nombre y DNI'); return; }
+  if (!url) { showResult(res, 'error', 'Configurá la URL en ⚙️ Config'); return; }
+
+  showResult(res, '', 'Generando...');
+
+  const dia = document.getElementById("f-dia").value;
+  const grupo = document.getElementById("f-grupo").value;
+  jsonp(url, { action: "crear", nombre, dni, mail, telefono, cantidad, dia, grupo }, function(err, data) {
+    if (err || !data) {
+      showResult(res, 'error', 'No se pudo conectar.');
+      return;
+    }
+    if (data.ok) {
+      const tickets = getTickets();
+      data.codigos.forEach((codigo, i) => {
+        tickets.unshift({ id: codigo, nombre, dni, mail, index: i+1, total: data.codigos.length, usado: false, usadoEn: null });
+      });
+      saveTickets(tickets);
+      renderStats();
+      renderRecientes();
+      const chips = data.codigos.map(c => '<span class="codigo-chip">' + c + '</span>').join('');
+      showResult(res, 'ok', '✓ ' + data.codigos.length + ' entrada(s) generada(s)<br><div class="codigos-list">' + chips + '</div>');
+      document.getElementById('f-nombre').value = '';
+      document.getElementById('f-dni').value = '';
+      document.getElementById('f-mail').value = '';
+      document.getElementById('f-telefono').value = '';
+      document.getElementById('f-cantidad').value = '1';
+    } else {
+      showResult(res, 'error', 'Error: ' + JSON.stringify(data));
+    }
+  });
+}
+
+function renderStats() {
+  const t = getTickets();
+  document.getElementById('stat-total').textContent = t.length;
+  document.getElementById('stat-usadas').textContent = t.filter(x => x.usado).length;
+  document.getElementById('stat-pend').textContent = t.filter(x => !x.usado).length;
+}
+
+function renderRecientes() {
+  const recientes = getTickets().slice(0, 6);
+  const cont = document.getElementById('recientes');
+  if (!recientes.length) { cont.innerHTML = ''; return; }
+  cont.innerHTML = '<p style="font-size:13px;color:#888;margin-bottom:8px">Últimas entradas:</p>' +
+    recientes.map(t => '<div class="ticket-item"><div class="qr-wrap" id="qr-' + t.id + '"></div><div class="ticket-info"><div class="ticket-name">' + t.nombre + '</div><div class="ticket-meta">DNI ' + t.dni + ' · ' + t.id + '</div></div><span class="badge ' + (t.usado ? 'badge-used' : 'badge-ok') + '">' + (t.usado ? 'Usado' : 'Válido') + '</span></div>').join('');
+  recientes.forEach(t => {
+    const el = document.getElementById('qr-' + t.id);
+    if (el && !el.innerHTML) {
+      try { new QRCode(el, { text: t.id, width: 52, height: 52, correctLevel: QRCode.CorrectLevel.L }); } catch(e) {}
+    }
+  });
+}
+
+function renderLista() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const tickets = getTickets();
+  const filtered = tickets.filter(t => !q || t.nombre.toLowerCase().includes(q) || t.dni.includes(q) || t.id.toLowerCase().includes(q));
+  document.getElementById('lista-container').innerHTML = filtered.length ?
+    '<p style="font-size:13px;color:#888;margin-bottom:8px">' + filtered.length + ' entrada(s)</p>' +
+    filtered.map(t => '<div class="ticket-item"><div class="ticket-info"><div class="ticket-name">' + t.nombre + '</div><div class="ticket-meta">DNI ' + t.dni + ' · ' + t.id + ' · ' + (t.mail || 'sin mail') + '</div></div><span class="badge ' + (t.usado ? 'badge-used' : 'badge-ok') + '">' + (t.usado ? 'Ingresó' : 'Pendiente') + '</span></div>').join('') :
+    '<p style="text-align:center;color:#aaa;padding:40px">Sin resultados</p>';
+}
+
+function showResult(el, type, msg) {
+  el.style.display = 'block';
+  el.className = 'result' + (type ? ' ' + type : '');
+  el.innerHTML = msg;
+}
+
+document.getElementById('scan-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') validarManual();
+});
+
+renderStats();
+renderRecientes();
+</script>
+</body>
+</html>
