@@ -90,6 +90,20 @@ input:focus { outline: none; border-color: #4285f4; }
     <input type="text" id="f-nombre" placeholder="Ej: María González">
     <label>DNI</label>
     <input type="text" id="f-dni" placeholder="12345678">
+    <label>Día del evento</label>
+    <select id="f-dia" style="width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;margin-bottom:14px">
+      <option value="SAB">Sábado 12/12</option>
+      <option value="DOM">Domingo 13/12</option>
+    </select>
+    <label>Grupo</label>
+    <select id="f-grupo" style="width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;margin-bottom:14px">
+      <option value="Grupo 1">Grupo 1 (Sábado)</option>
+      <option value="Grupo 2">Grupo 2 (Sábado)</option>
+      <option value="Grupo 3">Grupo 3 (Sábado)</option>
+      <option value="Grupo 4">Grupo 4 (Domingo)</option>
+      <option value="Grupo 5">Grupo 5 (Domingo)</option>
+      <option value="Grupo Inicial">Grupo Inicial (Domingo)</option>
+    </select>
     <label>Teléfono de contacto</label>
     <input type="tel" id="f-telefono" placeholder="Ej: 1123456789">
     <label>Mail</label>
@@ -279,7 +293,9 @@ function generarEntradas() {
 
   showResult(res, '', 'Generando...');
 
-  jsonp(url, { action: 'crear', nombre, dni, mail, telefono, cantidad }, function(err, data) {
+  const dia = document.getElementById("f-dia").value;
+  const grupo = document.getElementById("f-grupo").value;
+  jsonp(url, { action: "crear", nombre, dni, mail, telefono, cantidad, dia, grupo }, function(err, data) {
     if (err || !data) {
       showResult(res, 'error', 'No se pudo conectar.');
       return;
