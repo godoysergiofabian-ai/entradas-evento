@@ -97,12 +97,9 @@ input:focus { outline: none; border-color: #4285f4; }
     </select>
     <label>Grupo</label>
     <select id="f-grupo" style="width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;margin-bottom:14px">
-      <option value="Grupo 1">Grupo 1 (Sábado)</option>
-      <option value="Grupo 2">Grupo 2 (Sábado)</option>
-      <option value="Grupo 3">Grupo 3 (Sábado)</option>
-      <option value="Grupo 4">Grupo 4 (Domingo)</option>
-      <option value="Grupo 5">Grupo 5 (Domingo)</option>
-      <option value="Grupo Inicial">Grupo Inicial (Domingo)</option>
+      <option value="Grupo 1">Grupo 1</option>
+      <option value="Grupo 2">Grupo 2</option>
+      <option value="Grupo 3">Grupo 3</option>
     </select>
     <label>Teléfono de contacto</label>
     <input type="tel" id="f-telefono" placeholder="Ej: 1123456789">
@@ -357,6 +354,16 @@ function showResult(el, type, msg) {
   el.className = 'result' + (type ? ' ' + type : '');
   el.innerHTML = msg;
 }
+
+document.getElementById('f-dia').addEventListener('change', function() {
+  const dia = this.value;
+  const grupo = document.getElementById('f-grupo');
+  if (dia === 'SAB') {
+    grupo.innerHTML = '<option value="Grupo 1">Grupo 1</option><option value="Grupo 2">Grupo 2</option><option value="Grupo 3">Grupo 3</option>';
+  } else {
+    grupo.innerHTML = '<option value="Grupo 4">Grupo 4</option><option value="Grupo 5">Grupo 5</option><option value="Grupo Inicial">Grupo Inicial</option>';
+  }
+});
 
 document.getElementById('scan-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') validarManual();
